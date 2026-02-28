@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction History Component Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: white;
+    }
+
+    .page-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .demo-container {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    @media (max-width: 640px) {
+      .page-container {
+        padding: 1rem;
+      }
+    }
+
+    /* ── Collapse/expand transition animations ──────────────────── */
+    .tx-card {
+      transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        width 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        margin-bottom 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 300ms ease;
+      will-change: transform, width, margin-bottom, opacity;
+    }
+
+    @keyframes cardExpandPop {
+      0% {
+        transform: translateY(0) scale(0.95);
+        opacity: 0.5;
+      }
+
+      60% {
+        transform: translateY(0) scale(1.02);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes cardCollapseTuck {
+      0% {
+        opacity: 1;
+        filter: blur(0);
+      }
+
+      50% {
+        opacity: 0.7;
+        filter: blur(1px);
+      }
+
+      100% {
+        opacity: 1;
+        filter: blur(0);
+      }
+    }
+
+    .tx-card.expand-pop {
+      animation: cardExpandPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .tx-card.collapse-tuck {
+      animation: cardCollapseTuck 400ms ease both;
+    }
+
+    /* Toggle button styling */
+    .toggle-btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 300ms ease;
+    }
+
+    .toggle-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .toggle-btn:active {
+      transform: scale(0.95);
+    }
+
+    .toggle-btn .arrow-icon {
+      display: inline-block;
+      transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toggle-btn.collapsed .arrow-icon {
+      transform: rotate(180deg);
+    }
+
+    @keyframes btnRipple {
+      0% {
+        transform: scale(0);
+        opacity: 0.5;
+      }
+
+      100% {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    .toggle-btn .ripple {
+      position: absolute;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      background: currentColor;
+      animation: btnRipple 500ms ease-out forwards;
+      pointer-events: none;
+    }
+
+    /* ── Theme transition animations ──────────────────────────────── */
+
+    /* Smooth color transitions on themed elements */
+    .theme-transition,
+    .theme-transition * {
+      transition: background-color 500ms ease,
+        color 500ms ease,
+        border-color 500ms ease,
+        box-shadow 500ms ease !important;
+    }
+
+    /* Don't let theme transition override card stacking animations */
+    .theme-transition .tx-card {
+      transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        width 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        margin-bottom 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 300ms ease,
+        background-color 500ms ease,
+        color 500ms ease,
+        border-color 500ms ease !important;
+    }
+
+    /* Circular wipe overlay */
+    .theme-wipe {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%) scale(0);
+      animation: themeWipeExpand 600ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes themeWipeExpand {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+      }
+
+      70% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.6;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 0;
+      }
+    }
+
+    /* Card shimmer on theme switch */
+    @keyframes themeCardShimmer {
+      0% {
+        filter: brightness(1);
+      }
+
+      40% {
+        filter: brightness(1.3);
+      }
+
+      100% {
+        filter: brightness(1);
+      }
+    }
+
+    .tx-card.theme-shimmer {
+      animation: themeCardShimmer 500ms ease both;
+    }
+
+    /* Theme toggle pill transitions */
+    .theme-pill {
+      transition: background-color 300ms ease,
+        color 300ms ease,
+        box-shadow 300ms ease,
+        transform 200ms ease !important;
+    }
+
+    .theme-pill:active {
+      transform: scale(0.92);
+    }
+
+    .theme-pill-track {
+      transition: background-color 400ms ease !important;
+    }
+
+    /* Body bg transition */
+    body {
+      transition: background-color 500ms ease;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-container">
+    <div class="demo-container">
+
+
+      <!-- Component Demo (Static HTML representation) -->
+      <div id="transaction-demo">
+        <!-- This will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Static demo implementation
+    const sampleTransactions = [
+      { id: '1', name: 'Transfer to John A', initials: 'JA', status: 'Completed', amount: -1500 },
+      { id: '2', name: 'Creator Payout', initials: 'X', status: 'Completed', amount: 3000 },
+      { id: '3', name: 'Transfer to Ifeaynyi J', initials: 'IJ', status: 'Processing', amount: -500 },
+      { id: '4', name: 'JP part payment', initials: 'JP', status: 'Completed', amount: 700 },
+      { id: '5', name: 'Transfer to Stacy N', initials: 'SN', status: 'Completed', amount: -200 },
+    ];
+
+    let currentTheme = 'light';
+    let isCollapsed = false; // Default to expanded
+
+    function formatAmount(amount) {
+      const prefix = amount >= 0 ? '+' : '-';
+      const absAmount = Math.abs(amount).toFixed(2);
+      return `<span class="text-gray-900 dark:text-gray-100 font-semibold">${prefix}$${absAmount}</span>`;
+    }
+
+    function getStatusBadge(status) {
+      const bgColor = status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      return `<span class="inline-block px-2 py-0.5 text-xs rounded-full ${bgColor}">${status}</span>`;
+    }
+
+    // X/Twitter SVG logo (white on black)
+    const xLogoSVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+
+    function getAvatarHTML(transaction) {
+      // Creator Payout → X/Twitter logo, black circle
+      if (transaction.initials === 'X') {
+        return `<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black flex items-center justify-center flex-shrink-0">${xLogoSVG}</div>`;
+      }
+      // Default → initials on blue circle
+      return `<div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">${transaction.initials}</div>`;
+    }
+
+    function renderTransactionItem(transaction) {
+      return `
+        <div class="bg-white dark:bg-gray-800 rounded-[14px] p-3 sm:p-4 shadow-sm">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              ${getAvatarHTML(transaction)}
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm sm:text-base truncate">${transaction.name}</div>
+                <div class="mt-1">${getStatusBadge(transaction.status)}</div>
+              </div>
+            </div>
+            <div class="text-right flex-shrink-0">
+              ${formatAmount(transaction.amount)}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getCardStyles(index, totalCards) {
+      if (!isCollapsed) {
+        // Expanded state: normal vertical list
+        return {
+          width: '100%',
+          transform: 'translateY(0) scale(1)',
+          zIndex: totalCards - index,
+          marginBottom: index < totalCards - 1 ? '1px' : '0',
+        };
+      }
+
+      // Collapsed state: pyramid stacking effect
+      const maxVisibleCards = 5;
+      const cappedIndex = Math.min(index, maxVisibleCards - 1);
+
+      // Width decreases by 4% per card (100%, 96%, 92%, 88%, 84%)
+      const widthPercent = 100 - (cappedIndex * 4);
+
+      // Vertical offset increases by 12px per card
+      const translateY = cappedIndex * 12;
+
+      // Z-index decreases with depth
+      const zIndex = totalCards - index;
+
+      return {
+        width: `${widthPercent}%`,
+        transform: `translateY(${translateY}px) scale(1)`,
+        zIndex,
+        marginBottom: index < totalCards - 1 ? '-85px' : '0',
+      };
+    }
+
+    function render() {
+      const themeClass = currentTheme === 'dark' ? 'dark' : '';
+
+      const html = `
+        <div id="theme-wrapper" class="${themeClass} theme-transition">
+          <div id="theme-container" class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-3 rounded-[16px]">
+            <!-- Theme toggle -->
+            <div class="mb-1.5">
+              <div class="inline-flex rounded-full bg-gray-200 dark:bg-gray-700 p-1 theme-pill-track">
+                <button
+                  id="light-btn"
+                  onclick="setTheme('light', event)"
+                  class="theme-pill px-4 py-2 rounded-full text-sm font-medium ${currentTheme === 'light'
+          ? 'bg-white text-gray-900 shadow-sm'
+          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+        }"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Light
+                </button>
+                <button
+                  id="dark-btn"
+                  onclick="setTheme('dark', event)"
+                  class="theme-pill px-4 py-2 rounded-full text-sm font-medium ${currentTheme === 'dark'
+          ? 'bg-gray-800 text-white shadow-sm'
+          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+        }"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark
+                </button>
+              </div>
+            </div>
+
+            <!-- Transaction list with pyramid stacking -->
+            <div id="cards-container" class="relative" style="margin-bottom: ${isCollapsed ? '2rem' : '0'}; transition: margin-bottom 400ms ease;">
+              ${sampleTransactions.map((transaction, index) => {
+          const styles = getCardStyles(index, sampleTransactions.length);
+          return `
+                  <div
+                    class="mx-auto tx-card"
+                    data-card-index="${index}"
+                    style="
+                      width: ${styles.width};
+                      transform: ${styles.transform};
+                      z-index: ${styles.zIndex};
+                      margin-bottom: ${styles.marginBottom};
+                      position: relative;
+                    "
+                  >
+                    <div class="border border-[#DEE0E3] dark:border-gray-700 rounded-[14px]">
+                      ${renderTransactionItem(transaction)}
+                    </div>
+                  </div>
+                `;
+        }).join('')}
+            </div>
+
+            <!-- Toggle button -->
+            ${sampleTransactions.length > 1 ? `
+              <div style="text-align: center;">
+                <button
+                  id="toggle-btn"
+                  onclick="toggleCollapse(event)"
+                  class="toggle-btn ${isCollapsed ? 'collapsed' : ''} mt-6 px-4 py-2 text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 rounded-full"
+                >
+                  ${isCollapsed ? 'See all' : 'Hide all'} <span class="arrow-icon">↑</span>
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('transaction-demo').innerHTML = html;
+    }
+
+    function setTheme(theme, event) {
+      if (theme === currentTheme) return;
+      currentTheme = theme;
+
+      const wrapper = document.getElementById('theme-wrapper');
+      const lightBtn = document.getElementById('light-btn');
+      const darkBtn = document.getElementById('dark-btn');
+
+      // ── 1. Circular wipe overlay ───────────────────────────────
+      if (event) {
+        const wipe = document.createElement('div');
+        wipe.className = 'theme-wipe';
+        // Color of the wipe: dark circle for dark mode, light circle for light
+        wipe.style.background = theme === 'dark'
+          ? 'radial-gradient(circle, rgba(17,24,39,0.7) 0%, rgba(17,24,39,0) 70%)'
+          : 'radial-gradient(circle, rgba(243,244,246,0.8) 0%, rgba(243,244,246,0) 70%)';
+        // Size: big enough to cover viewport
+        const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
+        wipe.style.width = size + 'px';
+        wipe.style.height = size + 'px';
+        wipe.style.left = event.clientX + 'px';
+        wipe.style.top = event.clientY + 'px';
+        document.body.appendChild(wipe);
+        setTimeout(() => wipe.remove(), 650);
+      }
+
+      // ── 2. Toggle dark class (Tailwind handles colors) ─────────
+      if (theme === 'dark') {
+        wrapper.classList.add('dark');
+        document.body.style.backgroundColor = '#111827';
+      } else {
+        wrapper.classList.remove('dark');
+        document.body.style.backgroundColor = 'white';
+      }
+
+      // ── 3. Update theme toggle button states ───────────────────
+      if (lightBtn && darkBtn) {
+        if (theme === 'light') {
+          lightBtn.className = 'theme-pill px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-900 shadow-sm';
+          darkBtn.className = 'theme-pill px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200';
+        } else {
+          darkBtn.className = 'theme-pill px-4 py-2 rounded-full text-sm font-medium bg-gray-800 text-white shadow-sm';
+          lightBtn.className = 'theme-pill px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200';
+        }
+      }
+
+      // ── 4. Staggered shimmer on transaction cards ───────────────
+      const cards = document.querySelectorAll('.tx-card');
+      cards.forEach((card, i) => {
+        card.classList.remove('theme-shimmer');
+        // Force reflow to restart animation
+        void card.offsetWidth;
+        setTimeout(() => {
+          card.classList.add('theme-shimmer');
+        }, i * 80);
+      });
+    }
+
+    function toggleCollapse(event) {
+      // Add ripple effect to button
+      if (event) {
+        const btn = document.getElementById('toggle-btn');
+        const rect = btn.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        ripple.style.left = (event.clientX - rect.left - 10) + 'px';
+        ripple.style.top = (event.clientY - rect.top - 10) + 'px';
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 500);
+      }
+
+      // Flip state
+      isCollapsed = !isCollapsed;
+
+      // Grab existing card elements and animate them in-place
+      const cards = document.querySelectorAll('.tx-card');
+      const container = document.getElementById('cards-container');
+      const toggleBtn = document.getElementById('toggle-btn');
+
+      // Update container margin
+      container.style.marginBottom = isCollapsed ? '2rem' : '0';
+
+      // Update button text and arrow direction
+      if (toggleBtn) {
+        toggleBtn.classList.toggle('collapsed', isCollapsed);
+        toggleBtn.querySelector('.arrow-icon') &&
+          (toggleBtn.childNodes.forEach(n => {
+            if (n.nodeType === 3 && n.textContent.trim()) {
+              n.textContent = isCollapsed ? 'See all ' : 'Hide all ';
+            }
+          }));
+      }
+
+      // Animate each card with stagger
+      cards.forEach((card, index) => {
+        const styles = getCardStyles(index, sampleTransactions.length);
+        const staggerDelay = index * 60; // 60ms stagger per card
+
+        // Remove any previous animation class
+        card.classList.remove('expand-pop', 'collapse-tuck');
+
+        setTimeout(() => {
+          // Apply new layout styles — the .tx-card CSS transition handles the smooth movement
+          card.style.width = styles.width;
+          card.style.transform = styles.transform;
+          card.style.zIndex = styles.zIndex;
+          card.style.marginBottom = styles.marginBottom;
+
+          // Add the pop/tuck animation class for extra flair
+          if (isCollapsed) {
+            card.classList.add('collapse-tuck');
+          } else {
+            card.classList.add('expand-pop');
+          }
+        }, staggerDelay);
+      });
+    }
+
+    // Initial render
+    render();
+  </script>
+</body>
+
+</html>
